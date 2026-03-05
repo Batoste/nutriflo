@@ -11,6 +11,8 @@ class InventoryPage extends StatefulWidget {
 class _InventoryPageState extends State<InventoryPage> {
   final supabase = Supabase.instance.client;
   final _nameController = TextEditingController();
+  final _weightController = TextEditingController(text: "1");
+  String _selectedUnit = 'unité';
   String? _selectedCategoryId;
   List<Map<String, dynamic>> _categories = [];
 
@@ -48,22 +50,34 @@ class _InventoryPageState extends State<InventoryPage> {
               ),
               const TextField(
                 controller: _nameController,
-                decoration: InputDecoration(labelText: "Product Name"),
+                decoration: InputDecoration(labelText: "Nom du produit"),
               ),
               const SizedBox(height: 10),
-              DropdownButtonFormField<String>(
-                decoration: const InputDecoration(labelText: "Category"),
-                items: _categories.map((cat) {
-                  return DropdownMenuItem(
-                    value: cat['id'].toString(),
-                    child: Text(cat['name']),
-                  );
-                }).toList(),
-                onChanged: (value) {
-                  setState(() {
-                    _selectedCategoryId = value;
-                  });
-                },
+              Row(
+                // On met Quantité et Unité sur la même ligne
+                children: [
+                  Expanded(
+                    flex: 2,
+                    child: TextField(
+                      controller: _weightController,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                        labelText: "Contenance (ex: 500)",
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    flex: 1,
+                    child: DropdownButtonFormField<String>(
+                      initialValue: _selectedUnit,
+                      items: ['unité', 'g', 'ml', 'cl', 'kg', 'L'].map((u) {
+                        return DropdownMenuItem(value: u, child: Text(u));
+                      }).toList(),
+                      onChanged: (val) => setState(() => _selectedUnit = val!),
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 20),
               ElevatedButton(
@@ -124,7 +138,12 @@ class _InventoryPageState extends State<InventoryPage> {
     try {
       final product = await supabase
           .from('products_catalog')
-          .insert({'name': name, 'category_id': _selectedCategoryId})
+          .insert({
+            'name': name,
+            'category_id': _selectedCategoryId,
+            'unit': _selectedUnit,
+            'weight': int.tryParse(_weightController.text) ?? 1.0,
+          })
           .select()
           .single();
 
